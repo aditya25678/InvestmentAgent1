@@ -1,0 +1,2 @@
+[console_scripts]
+ias = investment_agent_system.cli:app

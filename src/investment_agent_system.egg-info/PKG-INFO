@@ -1,0 +1,247 @@
+Metadata-Version: 2.4
+Name: investment-agent-system
+Version: 0.1.0
+Summary: Production-grade multi-agent investment thesis engine with auditable claims and debate workflow.
+Author: Investment Agent System
+License: MIT
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.30.0
+Requires-Dist: pydantic>=2.9.0
+Requires-Dist: pydantic-settings>=2.5.2
+Requires-Dist: sqlalchemy>=2.0.35
+Requires-Dist: alembic>=1.13.2
+Requires-Dist: httpx>=0.27.2
+Requires-Dist: requests>=2.32.3
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: tenacity>=9.0.0
+Requires-Dist: ollama>=0.6.1
+Requires-Dist: feedparser>=6.0.11
+Requires-Dist: ddgs>=9.0.0
+Requires-Dist: duckduckgo-search>=6.3.0
+Requires-Dist: vaderSentiment>=3.3.2
+Requires-Dist: typer>=0.12.5
+Requires-Dist: rich>=13.9.2
+Requires-Dist: python-dateutil>=2.9.0.post0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.3; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24.0; extra == "dev"
+Requires-Dist: ruff>=0.6.9; extra == "dev"
+Requires-Dist: mypy>=1.11.2; extra == "dev"
+
+# Investment Agent System
+
+Production-grade multi-agent investment research engine that runs independent analysts, structured cross-examination, rebuttals, and committee synthesis to produce an auditable investment thesis.
+
+## What This System Does
+
+- Runs specialized agents with bounded decision styles:
+  - `fundamental`
+  - `quant`
+  - `macro`
+  - `sentiment`
+  - `skeptic`
+  - `catalyst`
+  - `portfolio`
+- Enforces staged workflow:
+  1. Independent memo generation (no cross-agent contamination)
+  2. Structured challenge round
+  3. Structured rebuttal round
+  4. Committee synthesis
+- Stores full audit trail in SQL:
+  - raw evidence store
+  - structured claim store
+  - debates/rebuttals
+  - final thesis decision
+- Pulls live internet data from real external sources:
+  - SEC EDGAR (`company_tickers`, `submissions`, `companyfacts`)
+  - Yahoo Finance market data/options (with automatic Stooq fallback when rate-limited)
+  - NewsAPI (if key provided), plus Google News RSS web-search fallback
+  - FRED macro data
+  - DuckDuckGo web search
+  - FMP analyst estimates (optional key)
+- Exposes both:
+  - CLI (`ias`)
+  - FastAPI service (`/runs`, `/runs/{id}/audit`, etc.)
+
+## System Architecture
+
+```
+src/investment_agent_system
+├── agents
+│   ├── engine.py            # agent generation for memo/challenge/rebuttal/synthesis
+│   └── prompts.py           # bounded role-specific styles and protocols
+├── api
+│   └── main.py              # FastAPI endpoints
+├── llm
+│   └── client.py            # structured Ollama Cloud JSON-schema client
+├── models
+│   └── schemas.py           # strict pydantic contracts
+├── orchestration
+│   ├── service.py           # application service layer
+│   └── workflow.py          # staged multi-agent orchestration
+├── providers
+│   ├── market.py            # Yahoo Finance prices/options
+│   ├── sec.py               # SEC filings + XBRL facts
+│   ├── news.py              # NewsAPI + Google/Yahoo RSS + sentiment
+│   ├── macro.py             # FRED macro series
+│   ├── web_search.py        # DuckDuckGo web search
+│   └── fmp.py               # optional analyst estimate data
+├── research
+│   ├── context_builder.py   # role-based evidence access controls
+│   ├── data_aggregator.py   # parallel provider ingestion
+│   └── scoring.py           # aggregate scorecard calculations
+├── reporting
+│   └── renderer.py          # markdown thesis report rendering
+├── storage
+│   ├── db.py                # SQLAlchemy models/session
+│   └── repository.py        # persistence & query access
+└── cli.py                   # CLI entrypoint
+```
+
+## Installation
+
+1. Activate your existing conda environment (`myenv`):
+
+```bash
+conda activate myenv
+```
+
+2. Install package:
+
+```bash
+pip install -e ".[dev]"
+```
+
+3. Create environment config:
+
+```bash
+cp .env.example .env
+```
+
+4. Set required key in `.env`:
+
+- `OLLAMA_API_KEY` is required (agents use live LLM structured output).
+
+Optional but recommended:
+
+- `NEWSAPI_KEY`
+- `FMP_API_KEY`
+- `SEC_USER_AGENT` (use a real contact email/domain)
+
+## Data Source Hierarchy
+
+- **Market data**
+  - Primary: Yahoo Finance API endpoints
+  - Fallback: Stooq quote snapshot endpoint
+- **News**
+  - Primary: NewsAPI (when `NEWSAPI_KEY` is set)
+  - Web-search path: Google News RSS search query
+  - Additional fallback: Yahoo Finance RSS + VADER sentiment
+- **Estimates/revisions**
+  - Optional: FMP endpoints when `FMP_API_KEY` is set
+
+## Environment Variables
+
+See `.env.example`:
+
+- `OLLAMA_API_KEY`: required
+- `OLLAMA_MODEL`: default `glm-5.1:cloud`
+- `OLLAMA_FALLBACK_MODELS`: comma-separated automatic fallback list (default `gpt-oss:20b-cloud,qwen3.5:cloud`)
+- `OLLAMA_HOST`: default `https://ollama.com`
+- `OLLAMA_SCHEMA_REPAIR_ATTEMPTS`: retries for malformed/non-compliant JSON responses (default `1`)
+- `DATABASE_URL`: default `sqlite:///./data/investment_agent.db`
+- `SEC_USER_AGENT`: required by SEC; include your contact
+- `MAX_NEWS_ARTICLES`, `MAX_WEB_RESULTS`: evidence limits
+- `REQUIRED_CONDA_ENV`: default `myenv`
+- `ENFORCE_CONDA_ENV`: default `true` (startup fails if not in `myenv`)
+
+## Run From CLI
+
+Generate a full thesis:
+
+```bash
+ias run --ticker AAPL --horizon "6-12 months"
+```
+
+Limit to selected roles:
+
+```bash
+ias run --ticker NVDA --roles "fundamental,quant,skeptic,portfolio"
+```
+
+Inspect historical runs:
+
+```bash
+ias list-runs
+ias show <run_id>
+```
+
+Start API server:
+
+```bash
+ias api --host 127.0.0.1 --port 8000
+```
+
+## Run Via API
+
+Create run:
+
+```bash
+curl -X POST http://127.0.0.1:8000/runs \
+  -H "Content-Type: application/json" \
+  -d '{"ticker":"AAPL","horizon":"6-12 months"}'
+```
+
+Inspect results:
+
+```bash
+curl http://127.0.0.1:8000/runs/<run_id>
+curl http://127.0.0.1:8000/runs/<run_id>/thesis
+curl http://127.0.0.1:8000/runs/<run_id>/agents
+curl http://127.0.0.1:8000/runs/<run_id>/discussion
+curl http://127.0.0.1:8000/runs/<run_id>/audit
+```
+
+## Output Artifacts
+
+Each run writes:
+
+- Markdown thesis report: `reports/<run_id>_<ticker>.md`
+- JSON final thesis: `reports/<run_id>_<ticker>.json`
+- JSON per-agent memos/theses: `reports/<run_id>_<ticker>_agents.json`
+- JSON challenge/rebuttal discussion: `reports/<run_id>_<ticker>_discussion.json`
+- SQL audit trail: `data/investment_agent.db`
+
+## Anti-Hallucination Controls
+
+- Strict JSON schema output contracts for each stage
+- Explicit `FACT` / `INFERENCE` / `ESTIMATE` / `OPINION` claim tagging
+- Confidence and falsifier requirements
+- Citation requirement on non-obvious claims
+- `cannot_verify` section required in final thesis
+- Independent memo stage before any inter-agent visibility
+
+## Ollama Capacity Handling
+
+If `glm-5.1:cloud` returns HTTP 403 with high-volume/subscription messaging, the system
+automatically attempts `OLLAMA_FALLBACK_MODELS` in order. Keep `OLLAMA_MODEL=glm-5.1:cloud`
+as the primary model and configure fallbacks so runs remain operational when capacity is constrained.
+
+When fallback models return non-schema JSON, the client performs a strict schema-repair pass
+before failing the run.
+
+## Production Notes
+
+- Use a managed SQL backend (PostgreSQL) for production scale.
+- Add secrets manager integration for API keys.
+- Add retry/circuit-breaker policy around each provider.
+- Add post-trade attribution module to compare thesis vs realized outcomes.
+- Add scheduled workflows (daily/weekly refresh runs) through cron or your job scheduler.
+
+## Tests
+
+```bash
+pytest
+```
