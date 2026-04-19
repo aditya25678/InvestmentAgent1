@@ -30,8 +30,6 @@ class WebSearchProvider(ResearchProvider):
             f"{ticker} competitive risks",
             f"{ticker} valuation analysis",
             f"{ticker} regulation legal issues",
-            f"{ticker} management commentary strategy",
-            f"{ticker} customer demand trends",
         ]
         rows: list[ProviderResult] = []
         with warnings.catch_warnings():
@@ -65,7 +63,7 @@ class WebSearchProvider(ResearchProvider):
         dedup: dict[str, ProviderResult] = {}
         for row in rows:
             dedup[row.url] = row
-        return list(dedup.values())[: min(settings.max_web_results, 24)]
+        return list(dedup.values())[: settings.max_web_results]
 
 
 def _resolve_ddgs_client() -> Any:

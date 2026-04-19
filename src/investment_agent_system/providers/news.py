@@ -59,10 +59,7 @@ class NewsProvider(ResearchProvider):
 
     async def _fetch_newsapi(self, ticker: str, api_key: str) -> list[ProviderResult]:
         settings = get_settings()
-        query = (
-            f"{ticker} stock OR {ticker} earnings OR {ticker} guidance OR "
-            f"{ticker} margin OR {ticker} regulation OR {ticker} demand"
-        )
+        query = f"{ticker} stock OR {ticker} earnings OR {ticker} guidance"
         url = "https://newsapi.org/v2/everything"
         params = {
             "q": query,
@@ -136,10 +133,7 @@ class NewsProvider(ResearchProvider):
         queries = [
             f"{ticker} stock news",
             f"{ticker} earnings preview",
-            f"{ticker} valuation debate",
-            f"{ticker} legal risk",
-            f"{ticker} supply chain",
-            f"{ticker} analyst revisions",
+            f"{ticker} regulation legal issues",
         ]
         per_query = max(4, settings.max_news_articles // max(1, len(queries)))
         for raw_query in queries:

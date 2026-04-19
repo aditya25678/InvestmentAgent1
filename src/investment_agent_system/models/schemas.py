@@ -36,9 +36,6 @@ class Stage(str, Enum):
     CHALLENGE = "challenge"
     REBUTTAL = "rebuttal"
     SYNTHESIS = "synthesis"
-    TEAM_DRAFT = "team_draft"
-    TEAM_CONSENSUS = "team_consensus"
-    DISCUSSION = "discussion"
 
 
 class ClaimType(str, Enum):
@@ -229,19 +226,9 @@ class PositionPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     suggested_size_pct_nav: float = Field(ge=0.0, le=20.0)
-    position_expression: str = Field(
-        description="Concrete instrument/expression, e.g., common stock, call spread, pair trade."
-    )
-    entry_price: float = Field(ge=0.0)
-    add_price: Optional[float] = Field(default=None, ge=0.0)
-    take_profit_price: float = Field(ge=0.0)
-    stop_loss_price: float = Field(ge=0.0)
-    invalidation_price: float = Field(ge=0.0)
-    risk_reward_ratio: float = Field(ge=0.0)
     entry_plan: str
     exit_plan: str
     hedging_plan: str
-    sizing_rationale: str
     stop_conditions: list[str] = Field(min_length=2, max_length=8)
 
 
@@ -260,13 +247,6 @@ class FinalThesis(BaseModel):
     supporting_evidence: list[str] = Field(min_length=3, max_length=12)
     main_risks: list[str] = Field(min_length=3, max_length=12)
     catalysts: list[str] = Field(min_length=3, max_length=12)
-    current_price: float = Field(ge=0.0)
-    base_case_price_target: float = Field(ge=0.0)
-    bull_case_price_target: float = Field(ge=0.0)
-    bear_case_price_target: float = Field(ge=0.0)
-    expected_return_base_pct: float
-    expected_downside_bear_pct: float
-    valuation_method: str
     valuation_and_expected_return: str
     position_plan: PositionPlan
     key_debates: list[str] = Field(min_length=3, max_length=12)
@@ -281,7 +261,6 @@ class RunRequest(BaseModel):
 
     ticker: str
     horizon: str = "6-12 months"
-    request_title: Optional[str] = None
     include_roles: Optional[list[AgentRole]] = None
     model: Optional[str] = None
 
@@ -293,14 +272,6 @@ class RunRequest(BaseModel):
             msg = "Ticker cannot be empty"
             raise ValueError(msg)
         return normalized
-
-    @field_validator("request_title")
-    @classmethod
-    def normalize_request_title(cls, value: Optional[str]) -> Optional[str]:
-        if value is None:
-            return None
-        normalized = value.strip()
-        return normalized or None
 
 
 class RunMetadata(BaseModel):

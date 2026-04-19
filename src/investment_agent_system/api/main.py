@@ -43,7 +43,6 @@ async def create_run(request: RunRequest) -> dict:
         "run_id": output.run_id,
         "ticker": output.ticker,
         "horizon": output.horizon,
-        "request_title": output.request_title,
         "recommendation": output.final_thesis.recommendation.value,
         "overall_conviction": output.final_thesis.confidence.overall_conviction,
     }

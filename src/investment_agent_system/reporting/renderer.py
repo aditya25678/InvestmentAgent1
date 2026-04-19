@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from investment_agent_system.models.schemas import AgentMemo, Challenge, FinalThesis, Rebuttal
 from investment_agent_system.research.scoring import aggregate_scorecards
 
@@ -18,8 +16,6 @@ def render_final_markdown(
     memos: list[AgentMemo],
     challenges: list[Challenge],
     rebuttals: list[Rebuttal],
-    team_member_memos: list[dict[str, Any]],
-    discussion_timeline: list[dict[str, Any]],
     final_thesis: FinalThesis,
 ) -> str:
     lines: list[str] = [
@@ -36,15 +32,6 @@ def render_final_markdown(
         f"- Bull case: {final_thesis.bull_case}",
         f"- Bear case: {final_thesis.bear_case}",
         "",
-        "## Valuation Snapshot",
-        f"- Current price: {final_thesis.current_price:.2f}",
-        f"- Base target: {final_thesis.base_case_price_target:.2f}",
-        f"- Bull target: {final_thesis.bull_case_price_target:.2f}",
-        f"- Bear target: {final_thesis.bear_case_price_target:.2f}",
-        f"- Base expected return (%): {final_thesis.expected_return_base_pct:.2f}",
-        f"- Bear expected downside (%): {final_thesis.expected_downside_bear_pct:.2f}",
-        f"- Method: {final_thesis.valuation_method}",
-        "",
         "## Evidence and Risks",
         "- Supporting evidence:",
     ]
@@ -59,20 +46,9 @@ def render_final_markdown(
             "## Valuation and Position Plan",
             f"- Valuation / expected return: {final_thesis.valuation_and_expected_return}",
             f"- Suggested size (% NAV): {final_thesis.position_plan.suggested_size_pct_nav:.2f}",
-            f"- Position expression: {final_thesis.position_plan.position_expression}",
-            f"- Entry price: {final_thesis.position_plan.entry_price:.2f}",
-            "- Add-on price: "
-            f"{final_thesis.position_plan.add_price:.2f}"
-            if final_thesis.position_plan.add_price is not None
-            else "- Add-on price: n/a",
-            f"- Take-profit price: {final_thesis.position_plan.take_profit_price:.2f}",
-            f"- Stop-loss price: {final_thesis.position_plan.stop_loss_price:.2f}",
-            f"- Invalidation price: {final_thesis.position_plan.invalidation_price:.2f}",
-            f"- Risk/reward ratio: {final_thesis.position_plan.risk_reward_ratio:.2f}",
             f"- Entry plan: {final_thesis.position_plan.entry_plan}",
             f"- Exit plan: {final_thesis.position_plan.exit_plan}",
             f"- Hedging plan: {final_thesis.position_plan.hedging_plan}",
-            f"- Sizing rationale: {final_thesis.position_plan.sizing_rationale}",
             "- Stop conditions:",
         ]
     )
@@ -99,31 +75,7 @@ def render_final_markdown(
     lines.append("- Monitoring checklist:")
     lines.extend([f"  - {item}" for item in final_thesis.monitoring_checklist])
 
-    lines.extend(
-        [
-            "",
-            "## Team Member Drafts",
-        ]
-    )
-    for member in team_member_memos:
-        member_memo = member["memo"]
-        role = str(member.get("role", "unknown"))
-        lines.extend(
-            [
-                f"### {role} - {member.get('member_label')}",
-                f"- Recommendation: {member_memo['recommendation']}",
-                f"- Confidence: {_fmt_pct(float(member_memo['confidence']))}",
-                f"- Thesis: {member_memo['thesis']}",
-                "",
-            ]
-        )
-
-    lines.extend(
-        [
-            "",
-            "## Agent Snapshots",
-        ]
-    )
+    lines.extend(["", "## Agent Snapshots"])
     for memo in memos:
         lines.extend(
             [
@@ -154,18 +106,7 @@ def render_final_markdown(
         lines.append("- Unknowns:")
         for item in memo.unknowns:
             lines.append(f"  - {item}")
-            lines.append("")
-
-    if discussion_timeline:
-        lines.extend(["## Discussion Timeline", ""])
-        for idx, turn in enumerate(discussion_timeline, start=1):
-            lines.append(
-                f"{idx}. Round {turn.get('round')} | {turn.get('type')} | "
-                f"{turn.get('from_role')} -> {turn.get('to_role')}"
-            )
-            lines.append(f"   {turn.get('summary', '')}")
-            for question in turn.get("critical_questions", [])[:3]:
-                lines.append(f"   - {question}")
+        lines.append("")
 
     aggregate = aggregate_scorecards(memos)
     if aggregate:

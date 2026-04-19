@@ -12,7 +12,7 @@ from investment_agent_system.models.schemas import (
     ScoreCard,
 )
 from investment_agent_system.orchestration.service import ThesisService
-from investment_agent_system.orchestration.workflow import TeamMemberMemo, WorkflowOutput
+from investment_agent_system.orchestration.workflow import WorkflowOutput
 
 
 def _claim(text: str) -> Claim:
@@ -33,8 +33,8 @@ def _memo(role: AgentRole) -> AgentMemo:
         recommendation=Recommendation.LONG,
         horizon="1-2 months",
         confidence=0.65,
-        strongest_supporting_points=[_claim("a"), _claim("b"), _claim("c"), _claim("d")],
-        strongest_risks=[_claim("e"), _claim("f"), _claim("g"), _claim("h")],
+        strongest_supporting_points=[_claim("a"), _claim("b"), _claim("c")],
+        strongest_risks=[_claim("d"), _claim("e"), _claim("f")],
         what_would_change_my_mind=["x", "y"],
         unknowns=["u1", "u2"],
         scorecard=ScoreCard(
@@ -65,27 +65,12 @@ def _final_thesis() -> FinalThesis:
         supporting_evidence=["one", "two", "three"],
         main_risks=["r1", "r2", "r3"],
         catalysts=["c1", "c2", "c3"],
-        current_price=100.0,
-        base_case_price_target=115.0,
-        bull_case_price_target=130.0,
-        bear_case_price_target=90.0,
-        expected_return_base_pct=15.0,
-        expected_downside_bear_pct=-10.0,
-        valuation_method="method",
         valuation_and_expected_return="valuation text",
         position_plan=PositionPlan(
             suggested_size_pct_nav=3.0,
-            position_expression="common stock",
-            entry_price=100.0,
-            add_price=97.0,
-            take_profit_price=115.0,
-            stop_loss_price=92.0,
-            invalidation_price=89.0,
-            risk_reward_ratio=2.0,
             entry_plan="entry",
             exit_plan="exit",
             hedging_plan="hedge",
-            sizing_rationale="sizing",
             stop_conditions=["s1", "s2"],
         ),
         key_debates=["d1", "d2", "d3"],
@@ -101,35 +86,26 @@ def _final_thesis() -> FinalThesis:
     )
 
 
-def test_reports_written_to_title_subfolder(tmp_path: Path) -> None:
+def test_reports_written_to_flat_layout(tmp_path: Path) -> None:
     service = ThesisService()
     service.settings.reports_dir = str(tmp_path)
 
-    team_memo = _memo(AgentRole.FUNDAMENTAL)
+    memo = _memo(AgentRole.FUNDAMENTAL)
     output = WorkflowOutput(
         run_id="run-123",
         ticker="AAPL",
         horizon="1-2 months",
-        request_title="AAPL Folder Smoke",
-        team_member_memos=[
-            TeamMemberMemo(role=AgentRole.FUNDAMENTAL, member_label="member_a", memo=team_memo),
-            TeamMemberMemo(role=AgentRole.FUNDAMENTAL, member_label="member_b", memo=team_memo),
-        ],
-        memos=[team_memo],
+        memos=[memo],
         challenges=[],
         rebuttals=[],
-        discussion_timeline=[],
         final_thesis=_final_thesis(),
         report_markdown="# test",
     )
 
     service._persist_reports(output)
 
-    run_folder = tmp_path / "aapl_folder_smoke__run-123"
-    assert run_folder.exists()
-    assert (run_folder / "final_thesis.md").exists()
-    assert (run_folder / "final_thesis.json").exists()
-    assert (run_folder / "team_consensus_memos.json").exists()
-    assert (run_folder / "team_member_memos.json").exists()
-    assert (run_folder / "discussion.json").exists()
-    assert (run_folder / "run_summary.json").exists()
+    stem = "run-123_AAPL"
+    assert (tmp_path / f"{stem}.md").exists()
+    assert (tmp_path / f"{stem}.json").exists()
+    assert (tmp_path / f"{stem}_agents.json").exists()
+    assert (tmp_path / f"{stem}_discussion.json").exists()

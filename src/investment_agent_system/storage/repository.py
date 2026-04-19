@@ -79,33 +79,18 @@ class ResearchRepository:
         return orm.id
 
     def save_memo(self, run_id: str, stage: Stage, memo: AgentMemo) -> None:
-        self.save_memo_payload(
-            run_id=run_id,
-            stage=stage,
-            role=memo.role.value,
-            content_json=memo.model_dump(mode="json"),
+        self.session.add(
+            MemoORM(
+                run_id=run_id,
+                role=memo.role.value,
+                stage=stage.value,
+                content_json=memo.model_dump(mode="json"),
+            )
         )
         for claim in memo.strongest_supporting_points:
             self._save_claim(run_id=run_id, role=memo.role.value, stage=stage.value, claim=claim)
         for claim in memo.strongest_risks:
             self._save_claim(run_id=run_id, role=memo.role.value, stage=stage.value, claim=claim)
-
-    def save_memo_payload(
-        self,
-        *,
-        run_id: str,
-        stage: Stage,
-        role: str,
-        content_json: dict,
-    ) -> None:
-        self.session.add(
-            MemoORM(
-                run_id=run_id,
-                role=role,
-                stage=stage.value,
-                content_json=content_json,
-            )
-        )
 
     def save_challenge(self, run_id: str, challenge: Challenge) -> None:
         self.session.add(

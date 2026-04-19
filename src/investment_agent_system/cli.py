@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import re
 from pathlib import Path
 from typing import Optional
 
@@ -47,10 +46,6 @@ def _parse_roles(roles_csv: Optional[str]) -> Optional[list[AgentRole]]:
 def run(
     ticker: str = typer.Option(..., help="Ticker symbol, e.g. AAPL"),
     horizon: str = typer.Option("6-12 months", help="Investment horizon"),
-    title: Optional[str] = typer.Option(
-        None,
-        help="Run title used for report subfolder naming.",
-    ),
     roles: Optional[str] = typer.Option(
         None,
         help="Comma-separated roles. Example: fundamental,quant,skeptic,portfolio",
@@ -65,7 +60,6 @@ def run(
     request = RunRequest(
         ticker=ticker,
         horizon=horizon,
-        request_title=title,
         include_roles=_parse_roles(roles),
         model=model,
     )
@@ -80,21 +74,18 @@ def run(
         raise typer.Exit(code=1) from exc
 
     report_dir = Path(settings.reports_dir)
-    run_title = output.request_title
-    slug = _slugify(run_title)
-    run_folder = report_dir / f"{slug}__{output.run_id}"
-    md_path = run_folder / "final_thesis.md"
-    json_path = run_folder / "final_thesis.json"
-    agents_path = run_folder / "team_consensus_memos.json"
-    discussion_path = run_folder / "discussion.json"
+    report_stem = f"{output.run_id}_{output.ticker}"
+    md_path = report_dir / f"{report_stem}.md"
+    json_path = report_dir / f"{report_stem}.json"
+    agents_path = report_dir / f"{report_stem}_agents.json"
+    discussion_path = report_dir / f"{report_stem}_discussion.json"
 
     print(f"[bold green]Run completed[/bold green]: {output.run_id}")
     print(f"Recommendation: [bold]{output.final_thesis.recommendation.value}[/bold]")
     print(f"Overall conviction: {output.final_thesis.confidence.overall_conviction:.2f}")
-    print(f"Reports folder: {run_folder}")
     print(f"Markdown report: {md_path}")
     print(f"JSON thesis: {json_path}")
-    print(f"Team memos: {agents_path}")
+    print(f"Agent memos: {agents_path}")
     print(f"Discussion log: {discussion_path}")
 
 
@@ -143,14 +134,6 @@ def api(
     _ensure_runtime_env()
     init_db()
     uvicorn.run("investment_agent_system.api.main:app", host=host, port=port, reload=reload)
-
-
-def _slugify(value: str) -> str:
-    normalized = value.strip().lower()
-    normalized = re.sub(r"[^a-z0-9]+", "_", normalized)
-    normalized = normalized.strip("_")
-    return normalized[:80] or "thesis_request"
-
 
 if __name__ == "__main__":
     app()

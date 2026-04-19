@@ -5,20 +5,13 @@ from collections import defaultdict
 from investment_agent_system.models.schemas import AgentRole, EvidenceItem
 
 ROLE_SOURCE_ACCESS: dict[AgentRole, set[str]] = {
-    AgentRole.FUNDAMENTAL: {"filings", "fundamentals", "news", "web_search", "market_data"},
-    AgentRole.QUANT: {"market_data", "macro", "estimates", "web_search", "news"},
-    AgentRole.MACRO: {"macro", "market_data", "web_search", "news"},
-    AgentRole.SENTIMENT: {"news", "sentiment", "market_data", "web_search", "estimates"},
-    AgentRole.SKEPTIC: {"filings", "fundamentals", "news", "macro", "web_search", "market_data"},
-    AgentRole.CATALYST: {"news", "filings", "web_search", "market_data", "estimates"},
-    AgentRole.PORTFOLIO: {
-        "market_data",
-        "macro",
-        "fundamentals",
-        "news",
-        "sentiment",
-        "estimates",
-    },
+    AgentRole.FUNDAMENTAL: {"filings", "fundamentals", "news", "web_search"},
+    AgentRole.QUANT: {"market_data", "macro", "estimates"},
+    AgentRole.MACRO: {"macro", "market_data", "news"},
+    AgentRole.SENTIMENT: {"news", "sentiment", "market_data"},
+    AgentRole.SKEPTIC: {"filings", "fundamentals", "news", "macro"},
+    AgentRole.CATALYST: {"news", "filings", "web_search"},
+    AgentRole.PORTFOLIO: {"market_data", "macro", "fundamentals", "news", "sentiment"},
     AgentRole.COMMITTEE: {
         "market_data",
         "macro",
@@ -39,23 +32,12 @@ def _sort_key(item: EvidenceItem) -> float:
 
 
 def select_evidence_for_role(
-    role: AgentRole, evidence: list[EvidenceItem], max_items: int = 36
+    role: AgentRole, evidence: list[EvidenceItem], max_items: int = 30
 ) -> list[EvidenceItem]:
     allowed = ROLE_SOURCE_ACCESS.get(role, set())
     filtered = [item for item in evidence if item.source_type in allowed]
     filtered.sort(key=_sort_key, reverse=True)
-    per_source_limit = max(4, max_items // max(1, len(allowed)))
-    selected: list[EvidenceItem] = []
-    by_source_count: dict[str, int] = defaultdict(int)
-    for item in filtered:
-        count = by_source_count[item.source_type]
-        if count >= per_source_limit:
-            continue
-        selected.append(item)
-        by_source_count[item.source_type] += 1
-        if len(selected) >= max_items:
-            break
-    return selected
+    return filtered[:max_items]
 
 
 def render_research_packet(

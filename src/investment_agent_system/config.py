@@ -24,8 +24,9 @@ class Settings(BaseSettings):
     ollama_base_url: str = Field(default="", alias="OLLAMA_BASE_URL")
     ollama_temperature: float = Field(default=0.2, alias="OLLAMA_TEMPERATURE")
     ollama_schema_repair_attempts: int = Field(default=1, alias="OLLAMA_SCHEMA_REPAIR_ATTEMPTS")
-    ollama_max_concurrency: int = Field(default=2, alias="OLLAMA_MAX_CONCURRENCY")
-    ollama_request_timeout_seconds: int = Field(default=90, alias="OLLAMA_REQUEST_TIMEOUT_SECONDS")
+    ollama_request_timeout_seconds: int = Field(
+        default=90, alias="OLLAMA_REQUEST_TIMEOUT_SECONDS"
+    )
 
     newsapi_key: str = Field(default="", alias="NEWSAPI_KEY")
     fmp_api_key: str = Field(default="", alias="FMP_API_KEY")
@@ -33,8 +34,8 @@ class Settings(BaseSettings):
     database_url: str = Field(default="sqlite:///./data/investment_agent.db", alias="DATABASE_URL")
     reports_dir: str = Field(default="./reports", alias="REPORTS_DIR")
     request_timeout_seconds: int = Field(default=30, alias="REQUEST_TIMEOUT_SECONDS")
-    max_news_articles: int = Field(default=30, alias="MAX_NEWS_ARTICLES")
-    max_web_results: int = Field(default=30, alias="MAX_WEB_RESULTS")
+    max_news_articles: int = Field(default=20, alias="MAX_NEWS_ARTICLES")
+    max_web_results: int = Field(default=15, alias="MAX_WEB_RESULTS")
     required_conda_env: str = Field(default="myenv", alias="REQUIRED_CONDA_ENV")
     enforce_conda_env: bool = Field(default=True, alias="ENFORCE_CONDA_ENV")
     sec_user_agent: str = Field(

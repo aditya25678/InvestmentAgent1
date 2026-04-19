@@ -1,76 +1,29 @@
 # Investment Agent System
 
-Production-grade multi-agent investment research engine that runs independent analysts, structured cross-examination, rebuttals, and committee synthesis to produce an auditable investment thesis.
+Production-oriented multi-agent investment research engine that runs independent specialist analysts, structured cross-examination, rebuttals, and committee synthesis to produce an auditable thesis.
 
-## What This System Does
+## Workflow
 
-- Runs specialized agents with bounded decision styles:
-  - `fundamental`
-  - `quant`
-  - `macro`
-  - `sentiment`
-  - `skeptic`
-  - `catalyst`
-  - `portfolio`
-- Enforces staged workflow:
-  1. Per-role team member independent drafts (2 agents per role)
-  2. Per-role team consolidation memo
-  3. Multi-round cross-team challenge/rebuttal debate
-  4. Committee synthesis with concrete implementation plan
-- Stores full audit trail in SQL:
-  - raw evidence store
-  - structured claim store
-  - debates/rebuttals
-  - final thesis decision
-- Pulls live internet data from real external sources:
-  - SEC EDGAR (`company_tickers`, `submissions`, `companyfacts`)
-  - Yahoo Finance market data/options (with automatic Stooq fallback when rate-limited)
-  - NewsAPI (if key provided), plus Google News RSS web-search fallback
-  - FRED macro data
-  - DuckDuckGo web search
-  - FMP analyst estimates (optional key)
-- Exposes both:
-  - CLI (`ias`)
-  - FastAPI service (`/runs`, `/runs/{id}/audit`, etc.)
+The system runs a single analyst per role:
 
-## System Architecture
+- `fundamental`
+- `quant`
+- `macro`
+- `sentiment`
+- `skeptic`
+- `catalyst`
+- `portfolio`
 
-```
-src/investment_agent_system
-├── agents
-│   ├── engine.py            # agent generation for memo/challenge/rebuttal/synthesis
-│   └── prompts.py           # bounded role-specific styles and protocols
-├── api
-│   └── main.py              # FastAPI endpoints
-├── llm
-│   └── client.py            # structured Ollama Cloud JSON-schema client
-├── models
-│   └── schemas.py           # strict pydantic contracts
-├── orchestration
-│   ├── service.py           # application service layer
-│   └── workflow.py          # staged multi-agent orchestration
-├── providers
-│   ├── market.py            # Yahoo Finance prices/options
-│   ├── sec.py               # SEC filings + XBRL facts
-│   ├── news.py              # NewsAPI + Google/Yahoo RSS + sentiment
-│   ├── macro.py             # FRED macro series
-│   ├── web_search.py        # DuckDuckGo web search
-│   └── fmp.py               # optional analyst estimate data
-├── research
-│   ├── context_builder.py   # role-based evidence access controls
-│   ├── data_aggregator.py   # parallel provider ingestion
-│   └── scoring.py           # aggregate scorecard calculations
-├── reporting
-│   └── renderer.py          # markdown thesis report rendering
-├── storage
-│   ├── db.py                # SQLAlchemy models/session
-│   └── repository.py        # persistence & query access
-└── cli.py                   # CLI entrypoint
-```
+Execution stages:
 
-## Installation
+1. Independent memos (no cross-agent visibility first)
+2. Structured challenge prompts across predefined challenger/target pairs
+3. Rebuttals from challenged agents
+4. Committee-chair synthesis into final thesis
 
-1. Activate your existing conda environment (`myenv`):
+## Setup
+
+1. Activate your existing conda env:
 
 ```bash
 conda activate myenv
@@ -82,78 +35,50 @@ conda activate myenv
 python -m pip install -e ".[dev]"
 ```
 
-3. Create environment config:
+3. Configure environment:
 
 ```bash
 cp .env.example .env
 ```
 
-4. Set required key in `.env`:
+Required:
 
-- `OLLAMA_API_KEY` is required (agents use live LLM structured output).
+- `OLLAMA_API_KEY`
 
-Optional but recommended:
+Optional:
 
 - `NEWSAPI_KEY`
 - `FMP_API_KEY`
-- `SEC_USER_AGENT` (use a real contact email/domain)
+- `SEC_USER_AGENT` (recommended to include your real contact)
 
-## Data Source Hierarchy
+## CLI
 
-- **Market data**
-  - Primary: Yahoo Finance API endpoints
-  - Fallback: Stooq quote snapshot endpoint
-- **News**
-  - Primary: NewsAPI (when `NEWSAPI_KEY` is set)
-  - Web-search path: Google News RSS search query
-  - Additional fallback: Yahoo Finance RSS + VADER sentiment
-- **Estimates/revisions**
-  - Optional: FMP endpoints when `FMP_API_KEY` is set
-
-## Environment Variables
-
-See `.env.example`:
-
-- `OLLAMA_API_KEY`: required
-- `OLLAMA_MODEL`: default `glm-5.1:cloud`
-- `OLLAMA_FALLBACK_MODELS`: comma-separated automatic fallback list (default `gpt-oss:20b-cloud,qwen3.5:cloud`)
-- `OLLAMA_HOST`: default `https://ollama.com`
-- `OLLAMA_SCHEMA_REPAIR_ATTEMPTS`: retries for malformed/non-compliant JSON responses (default `1`)
-- `OLLAMA_MAX_CONCURRENCY`: throttles parallel model calls for team workflows (default `2`)
-- `DATABASE_URL`: default `sqlite:///./data/investment_agent.db`
-- `SEC_USER_AGENT`: required by SEC; include your contact
-- `MAX_NEWS_ARTICLES`, `MAX_WEB_RESULTS`: evidence limits
-- `REQUIRED_CONDA_ENV`: default `myenv`
-- `ENFORCE_CONDA_ENV`: default `true` (startup fails if not in `myenv`)
-
-## Run From CLI
-
-Generate a full thesis:
+Run a thesis:
 
 ```bash
-ias run --ticker AAPL --horizon "6-12 months" --title "AAPL medium-term thesis"
+ias run --ticker AAPL --horizon "6-12 months"
 ```
 
-Limit to selected roles:
+Limit roles:
 
 ```bash
 ias run --ticker NVDA --roles "fundamental,quant,skeptic,portfolio"
 ```
 
-Inspect historical runs:
+Inspect runs:
 
 ```bash
 ias list-runs
 ias show <run_id>
 ```
 
-Start API server:
+Start API:
 
 ```bash
 ias api --host 127.0.0.1 --port 8000
 ```
 
-## Run Via API
+## API
 
 Create run:
 
@@ -163,7 +88,7 @@ curl -X POST http://127.0.0.1:8000/runs \
   -d '{"ticker":"AAPL","horizon":"6-12 months"}'
 ```
 
-Inspect results:
+Read outputs:
 
 ```bash
 curl http://127.0.0.1:8000/runs/<run_id>
@@ -173,43 +98,25 @@ curl http://127.0.0.1:8000/runs/<run_id>/discussion
 curl http://127.0.0.1:8000/runs/<run_id>/audit
 ```
 
-## Output Artifacts
+## Output Files
 
-Each run writes into a dedicated subfolder:
+Each run writes flat artifacts in `reports/`:
 
-- `reports/<request_title_slug>__<run_id>/final_thesis.md`
-- `reports/<request_title_slug>__<run_id>/final_thesis.json`
-- `reports/<request_title_slug>__<run_id>/team_consensus_memos.json`
-- `reports/<request_title_slug>__<run_id>/team_member_memos.json`
-- `reports/<request_title_slug>__<run_id>/discussion.json`
-- `reports/<request_title_slug>__<run_id>/run_summary.json`
-- SQL audit trail: `data/investment_agent.db`
+- `<run_id>_<ticker>.md`
+- `<run_id>_<ticker>.json`
+- `<run_id>_<ticker>_agents.json`
+- `<run_id>_<ticker>_discussion.json`
 
-## Anti-Hallucination Controls
+SQL audit data is stored in `data/investment_agent.db`.
 
-- Strict JSON schema output contracts for each stage
-- Explicit `FACT` / `INFERENCE` / `ESTIMATE` / `OPINION` claim tagging
-- Confidence and falsifier requirements
-- Citation requirement on non-obvious claims
-- `cannot_verify` section required in final thesis
-- Independent memo stage before any inter-agent visibility
+## Data Providers
 
-## Ollama Capacity Handling
-
-If `glm-5.1:cloud` returns HTTP 403 with high-volume/subscription messaging, the system
-automatically attempts `OLLAMA_FALLBACK_MODELS` in order. Keep `OLLAMA_MODEL=glm-5.1:cloud`
-as the primary model and configure fallbacks so runs remain operational when capacity is constrained.
-
-When fallback models return non-schema JSON, the client performs a strict schema-repair pass
-before failing the run.
-
-## Production Notes
-
-- Use a managed SQL backend (PostgreSQL) for production scale.
-- Add secrets manager integration for API keys.
-- Add retry/circuit-breaker policy around each provider.
-- Add post-trade attribution module to compare thesis vs realized outcomes.
-- Add scheduled workflows (daily/weekly refresh runs) through cron or your job scheduler.
+- SEC EDGAR filings/XBRL
+- Yahoo Finance market data/options with Stooq fallback
+- NewsAPI (optional key), Google News RSS, Yahoo RSS
+- FRED macro series
+- DuckDuckGo web search
+- FMP estimates (optional key)
 
 ## Tests
 
