@@ -44,6 +44,7 @@ cp .env.example .env
 Required:
 
 - `OLLAMA_API_KEY`
+- `OLLAMA_MAX_CONCURRENCY` (recommended `1` for cloud stability)
 
 Optional:
 

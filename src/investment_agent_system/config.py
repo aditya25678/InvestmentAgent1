@@ -23,9 +23,10 @@ class Settings(BaseSettings):
     ollama_host: str = Field(default="https://ollama.com", alias="OLLAMA_HOST")
     ollama_base_url: str = Field(default="", alias="OLLAMA_BASE_URL")
     ollama_temperature: float = Field(default=0.2, alias="OLLAMA_TEMPERATURE")
+    ollama_max_concurrency: int = Field(default=1, alias="OLLAMA_MAX_CONCURRENCY")
     ollama_schema_repair_attempts: int = Field(default=1, alias="OLLAMA_SCHEMA_REPAIR_ATTEMPTS")
     ollama_request_timeout_seconds: int = Field(
-        default=90, alias="OLLAMA_REQUEST_TIMEOUT_SECONDS"
+        default=180, alias="OLLAMA_REQUEST_TIMEOUT_SECONDS"
     )
 
     newsapi_key: str = Field(default="", alias="NEWSAPI_KEY")
